@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:id="@+id/repo_item"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/repo_name_static_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginRight="4dp"
+        android:textStyle="bold"
+        android:text="Repository: "/>
+
+    <TextView
+        android:id="@+id/repo_name_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_toRightOf="@id/repo_name_static_text_view"
+        android:text="RepoName"/>
+
+    <TextView
+        android:id="@+id/repo_description_static_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginRight="4dp"
+        android:layout_below="@id/repo_name_text_view"
+        android:textStyle="bold"
+        android:text="Description: "/>
+
+    <TextView
+        android:id="@+id/repo_description_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_toRightOf="@id/repo_description_static_text_view"
+        android:layout_below="@id/repo_name_text_view"
+        android:text="RepoDescription"/>
+
+    <TextView
+        android:id="@+id/repo_owner_static_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginRight="4dp"
+        android:layout_below="@id/repo_description_text_view"
+        android:textStyle="bold"
+        android:text="Owner: "/>
+
+    <TextView
+        android:id="@+id/repo_owner_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_toRightOf="@id/repo_owner_static_text_view"
+        android:layout_below="@id/repo_description_text_view"
+        android:text="RepoOwner"/>
+
+
+</RelativeLayout>
