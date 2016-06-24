@@ -14,5 +14,7 @@ parse the JSONArray response in a background thread to prevent list stuttering, 
 
 
 How to use:  
--Import the project into Android Studio  
--Build the project and run it on an Android device, or if you're patient you can use the emulator.  
+1-Import the project into Android Studio  
+2-Build the project and run it on an Android device, or if you're patient you can use the emulator.  
+
+Alternatively, you can just install the GitHubRepos.apk to take a quick look.
