@@ -17,7 +17,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public static class CONSTANTS{
         public static final String DATABASE_NAME = "Repositories.db";
-        private static final int DATABASE_VERSION = 1;
+        private static final int DATABASE_VERSION = 2;
         public static final String TABLE_NAME = "repositories";
         public static final String COLUMN_REPO_NAME = "repoName";
         public static final String COLUMN_REPO_DESC = "repoDescription";
@@ -25,7 +25,7 @@ public class DBHelper extends SQLiteOpenHelper {
         public static final String COLUMN_REPO_URL = "repoURL";
         public static final String COLUMN_REPO_OWNER_URL = "ownerURL";
         public static final String COLUMN_REPO_PAGE_NUMBER = "pageNumber";
-        public static final String COLUMN_REPO_FORKABLE = "forkable";
+        public static final String COLUMN_REPO_FORKED = "forked";
     }
 
     private static DBHelper dbHelper;
@@ -39,7 +39,7 @@ public class DBHelper extends SQLiteOpenHelper {
             + CONSTANTS.COLUMN_REPO_URL + " TEXT,"
             + CONSTANTS.COLUMN_REPO_OWNER_URL + " TEXT,"
             + CONSTANTS.COLUMN_REPO_PAGE_NUMBER + " INT,"
-            + CONSTANTS.COLUMN_REPO_FORKABLE + " INT" + ")";
+            + CONSTANTS.COLUMN_REPO_FORKED + " INT" + ")";
 
     public static final String SQL_DELETE_QUERY = "DROP TABLE IF EXISTS " + CONSTANTS.TABLE_NAME;
 
@@ -83,7 +83,7 @@ public class DBHelper extends SQLiteOpenHelper {
             contentValues.put(CONSTANTS.COLUMN_REPO_URL, tempRepo.getRepoURL());
             contentValues.put(CONSTANTS.COLUMN_REPO_OWNER_URL, tempRepo.getOwnerURL());
             contentValues.put(CONSTANTS.COLUMN_REPO_PAGE_NUMBER, tempRepo.getPageNumber());
-            contentValues.put(CONSTANTS.COLUMN_REPO_FORKABLE, tempRepo.isForkable());
+            contentValues.put(CONSTANTS.COLUMN_REPO_FORKED, tempRepo.isForked());
             writableDatabase.insert(CONSTANTS.TABLE_NAME, null, contentValues);
         }
     }
@@ -101,7 +101,7 @@ public class DBHelper extends SQLiteOpenHelper {
                 CONSTANTS.COLUMN_REPO_URL,
                 CONSTANTS.COLUMN_REPO_OWNER_URL,
                 CONSTANTS.COLUMN_REPO_PAGE_NUMBER,
-                CONSTANTS.COLUMN_REPO_FORKABLE};
+                CONSTANTS.COLUMN_REPO_FORKED};
 
         //How you want the results to be sorted in the resulting Cursor
         String sortOrder = CONSTANTS.COLUMN_REPO_NAME + " ASC";
@@ -124,7 +124,7 @@ public class DBHelper extends SQLiteOpenHelper {
         int pageNumber;
         String repoURL;
         String ownerURL;
-        boolean forkable;
+        boolean forked;
 
         //Column indexes
         int repoNameColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_NAME);
@@ -133,7 +133,7 @@ public class DBHelper extends SQLiteOpenHelper {
         int pageNumberColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_PAGE_NUMBER);
         int repoURLColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_URL);
         int ownerURLColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_OWNER_URL);
-        int forkableColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_FORKABLE);
+        int forkableColumnIndex = cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_FORKED);
 
         //Loop through the cursor object and add the data to the List<Repository>
         if(cursor.moveToFirst()){
@@ -145,12 +145,12 @@ public class DBHelper extends SQLiteOpenHelper {
                 repoURL = cursor.getString(repoURLColumnIndex);
                 ownerURL = cursor.getString(ownerURLColumnIndex);
                 if(cursor.getInt(forkableColumnIndex) == 1){
-                    forkable = true;
+                    forked = true;
                 }
                 else{
-                    forkable = false;
+                    forked = false;
                 }
-                tempRepo = new Repository(repoName, repoDescription, repoOwner, pageNumber, repoURL, ownerURL, forkable);
+                tempRepo = new Repository(repoName, repoDescription, repoOwner, pageNumber, repoURL, ownerURL, forked);
                 localRepositories.add(tempRepo);
             }while (cursor.moveToNext());
         }
@@ -161,5 +161,23 @@ public class DBHelper extends SQLiteOpenHelper {
     public static void deleteAllRepos(String owner){
         int numOfRows = writableDatabase.delete(CONSTANTS.TABLE_NAME, CONSTANTS.COLUMN_REPO_OWNER + " =? ", new String[]{owner});
         Log.d("DBHelper", "Number of deleted rows: " + numOfRows);
+    }
+
+    public static int getMaxPageNumber(String owner){
+        int maxPageNumber = 0;
+        Cursor cursor = readableDatabase.query(CONSTANTS.TABLE_NAME,
+                new String[]{"MAX(" + CONSTANTS.COLUMN_REPO_PAGE_NUMBER + ") as pageNumber"},
+                CONSTANTS.COLUMN_REPO_OWNER + " =?",
+                new String[] {owner},
+                null,
+                null,
+                null);
+        if(cursor.moveToFirst()){
+            maxPageNumber = cursor.getInt(cursor.getColumnIndexOrThrow(CONSTANTS.COLUMN_REPO_PAGE_NUMBER));
+            return maxPageNumber;
+        }
+        else{
+            return maxPageNumber;
+        }
     }
 }

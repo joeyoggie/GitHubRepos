@@ -14,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -33,7 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-//TODO fetch more repos when the list is nearly at the end/bottom
+//TODO parse the JSONArray response in a background thread to prevent list stuttering,
+//TODO and start fetching before actually reaching the last list item
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
 
     ListView reposListView;
@@ -44,9 +46,16 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     //At first = 1, then increment at each fetching trial when the user reaches the end of the list
     int pageNumber = 1;
 
+    //Boolean that will be true whenever a fetching process is happening in the background
+    boolean fetchingData = false;
+
+    //Boolean that will indicate whether there's more repos to be retrieved from the server or not
+    boolean noMoreRepos = false;
+
     //The user for which to show the repositories
     String user;
 
+    //SwipeRefreshLayout is responsible for showing the loading animations to the user
     SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
@@ -57,6 +66,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         //Initialize the listview and the repositories list
         reposListView = (ListView) findViewById(R.id.repos_list_view);
         repositories = new ArrayList<>();
+
+        //Initialize the SwipeRefreshLayout
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(this);
 
         //Get the username of the repository owner
         SharedPreferences prefs = getSharedPreferences("com.example.android.githubrepos.user", 0);
@@ -69,11 +82,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         reposListAdapter = new ReposListAdapter(this, repositories);
         reposListView.setAdapter(reposListAdapter);
 
+        //Hide the scrollbar from the listview
+        reposListView.setVerticalScrollBarEnabled(false);
+
         //Add data to the listview from the local database, if empty then from the GitHub API
         loadData();
-
-        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
-        swipeRefreshLayout.setOnRefreshListener(this);
 
         //Set the list onLongClickListener and ask the user which page to open
         reposListView.setOnItemLongClickListener(new ListView.OnItemLongClickListener(){
@@ -106,46 +119,79 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 return true;
             }
         });
+
+        //Set the listview's onScrollListener to detect when the list is nearly at the bottom
+        reposListView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                Log.d("LIST", "Top list item: " + firstVisibleItem);
+                Log.d("LIST", "No of visible items: " + visibleItemCount);
+                Log.d("List", "Bottom list item: " + (firstVisibleItem+visibleItemCount));
+                Log.d("List", "Total items: " + totalItemCount);
+                if((firstVisibleItem + visibleItemCount) >= totalItemCount){
+                    if(!fetchingData && !noMoreRepos){
+                        getLatestRepos(user, ++pageNumber);
+                    }
+                }
+            }
+        });
     }
 
     //This method gets the repositories from GitHub API, 10 repositories at a time, for a given user
     //and gets the page corresponding to the pageNumber variable
     public void getLatestRepos(String user, int pageNumber){
 
+        //Set the bool value to true to prevent calling this method multiple times at the same time
+        fetchingData = true;
+
         //Progress dialog to be shown when the app is fetching the repositories from GitHub
         progressDialog = new ProgressDialog(MainActivity.this);
         progressDialog.setMessage("Getting repositories...");
         progressDialog.setProgressStyle(progressDialog.STYLE_SPINNER);
         progressDialog.setCanceledOnTouchOutside(false);
-        progressDialog.show();
+        //progressDialog.show();
 
         String url = "https://api.github.com/users/"+user+"/repos?page="+pageNumber+"&per_page=10";
 
         //Request a response from the provided URL.
         StringRequest request = new StringRequest(Request.Method.GET, url, new Response.Listener<String>(){
             JSONArray jsonArray;
+            List<Repository> receivedRepos = new ArrayList<>();
             @Override
             public void onResponse(String response) {
                 Log.d("MainPage", "Volley response: " + response);
                 if (response.length() > 2){ //2 as empty json array contains '[]' brackets
                     try {
                         jsonArray = new JSONArray(response);
-                        repositories.addAll(parseJSON(jsonArray));
+                        //Parse the data then add it to the list of repos
+                        receivedRepos = parseJSON(jsonArray);
+                        repositories.addAll(receivedRepos);
+                        //Notify the listview adapter that there's new data to be displaed
                         reposListAdapter.notifyDataSetChanged();
-                        DBHelper.insertRepositories(repositories);
-                        swipeRefreshLayout.setRefreshing(false);
+                        //Insert the retrieved repos into the local database
+                        DBHelper.insertRepositories(receivedRepos);
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
                 }
                 else {
                     Log.d("MainPage", "Volley: No repos found!");
+                    noMoreRepos = true;
                     Toast.makeText(MainActivity.this, "No repos found!", Toast.LENGTH_SHORT).show();
                 }
                 //Dismiss the progressDialog
                 if(progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
+                //Dismiss the swiping animations
+                swipeRefreshLayout.setRefreshing(false);
+                //Set the boolean to false as we finished retrieving the data
+                fetchingData = false;
             }
         }, new Response.ErrorListener() {
             @Override
@@ -155,6 +201,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 if(progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
+                //Dismiss the swiping animations
+                swipeRefreshLayout.setRefreshing(false);
+                //Set the boolean to false as we finished retrieving the data
+                fetchingData = false;
             }
         });
         //Add the request to the RequestQueue.
@@ -173,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         String repoOwner;
         String repoURL;
         String ownerURL;
-        Boolean forkable = false;
+        Boolean forked = false;
         //pageNumber
 
         //Temp Repository object that'll hold the data which will be added to the list
@@ -198,17 +248,17 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 //If the 'fork' variable is not found, it'll throw an exception, hence it's value is false
                 try{
                     if(repoJSONObject.getBoolean("fork")){
-                        forkable = true;
+                        forked = true;
                     }
                     else {
-                        forkable = false;
+                        forked = false;
                     }
                 }catch (JSONException jException){
-                    forkable = false;
+                    forked = false;
                 }
 
                 //Create a Repository object and add it to the list
-                repo = new Repository(repoName, repoDescription, repoOwner, pageNumber, repoURL, ownerURL, forkable);
+                repo = new Repository(repoName, repoDescription, repoOwner, pageNumber, repoURL, ownerURL, forked);
                 receivedRepositories.add(repo);
 
             } catch (JSONException e) {
@@ -220,9 +270,18 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     //This method adds data to the listview from the local database, if empty then from the GitHub API
     private void loadData(){
+        swipeRefreshLayout.setRefreshing(true);
         repositories.clear();
         repositories.addAll(DBHelper.getLocalRepos(user));
         reposListAdapter.notifyDataSetChanged();
+        swipeRefreshLayout.setRefreshing(false);
+
+        //Get the maxPageNumber from the database
+        pageNumber = DBHelper.getMaxPageNumber(user);
+        if(pageNumber == 0){
+            pageNumber = 1;
+        }
+        Log.d("MainPage", "PageNumber= " + pageNumber);
 
         if(repositories.isEmpty()){
             //Get data from GitHub API
@@ -230,13 +289,16 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
     }
 
+    //This method will clear the local data on the device and retrieve fresh data from the GitHub API
     private void refreshData(){
         DBHelper.deleteAllRepos(user);
         repositories.clear();
+        noMoreRepos = false;
         pageNumber = 1;
         getLatestRepos(user, pageNumber);
     }
 
+    //This method will be called whenever the user swipes down to refresh
     @Override
     public void onRefresh(){
         refreshData();
@@ -268,7 +330,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             //Show a dialog that asks the user which url to open
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
             builder.setTitle("Change user");
-            builder.setMessage("Enter the new user to view his/her repositories");
+            builder.setMessage("Enter the new user to view their repositories");
             final EditText userEditText = new EditText(MainActivity.this);
             LinearLayout.LayoutParams lParameters = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT);

@@ -59,8 +59,8 @@ public class ReposListAdapter extends ArrayAdapter {
         holder.repoDescriptionTextView.setText(repositories.get(position).getRepoDescription());
         holder.repoOwnerTextView.setText(repositories.get(position).getRepoOwner());
 
-        if(!repositories.get(position).isForkable()){
-            holder.repoItemView.setBackgroundColor(Color.LTGRAY);
+        if(!repositories.get(position).isForked()){
+            holder.repoItemView.setBackgroundColor(activity.getResources().getColor(android.R.color.holo_green_light));
         }
         else{
             holder.repoItemView.setBackgroundColor(Color.WHITE);

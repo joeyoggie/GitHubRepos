@@ -10,17 +10,17 @@ public class Repository {
     private int pageNumber;
     private String repoURL;
     private String ownerURL;
-    private Boolean forkable;
+    private Boolean forked;
 
     public Repository(String repoName, String repoDescription, String repoOwner, int pageNumber,
-                      String repoURL, String ownerURL, boolean forkable) {
+                      String repoURL, String ownerURL, boolean forked) {
         this.repoName = repoName;
         this.repoDescription = repoDescription;
         this.repoOwner = repoOwner;
         this.pageNumber = pageNumber;
         this.repoURL = repoURL;
         this.ownerURL = ownerURL;
-        this.forkable = forkable;
+        this.forked = forked;
     }
 
     public String getRepoName() {
@@ -71,12 +71,12 @@ public class Repository {
         this.ownerURL = ownerURL;
     }
 
-    public Boolean isForkable() {
-        return forkable;
+    public Boolean isForked() {
+        return forked;
     }
 
-    public void setForkable(boolean forkable) {
-        this.forkable = forkable;
+    public void setForked(boolean forked) {
+        this.forked = forked;
     }
 
 }
