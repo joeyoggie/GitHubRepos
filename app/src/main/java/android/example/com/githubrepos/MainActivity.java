@@ -2,6 +2,7 @@ package android.example.com.githubrepos;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -14,6 +15,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -21,6 +23,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -34,8 +37,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-//TODO parse the JSONArray response in a background thread to prevent list stuttering,
-//TODO and start fetching before actually reaching the last list item
+//TODO start fetching more data before actually reaching the last list item,
+//TODO and maybe parse the JSONArray response in a background thread to prevent list stuttering
+//TODO if fetching is started before reaching the end of the list.
+
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
 
     ListView reposListView;
@@ -182,7 +187,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 else {
                     Log.d("MainPage", "Volley: No repos found!");
                     noMoreRepos = true;
-                    Toast.makeText(MainActivity.this, "No repos found!", Toast.LENGTH_SHORT).show();
+                    if(repositories.isEmpty()){
+                        Toast.makeText(MainActivity.this, "No repos found!", Toast.LENGTH_SHORT).show();
+                    }
+                    else{
+                        Toast.makeText(MainActivity.this, "No more repos found!", Toast.LENGTH_SHORT).show();
+                    }
                 }
                 //Dismiss the progressDialog
                 if(progressDialog != null && progressDialog.isShowing()) {
@@ -196,8 +206,14 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Log.d("MainPage", "Volley error: " + error.toString());
-                Toast.makeText(MainActivity.this, "Unable to reach server.", Toast.LENGTH_SHORT).show();
+                NetworkResponse nResponse = error.networkResponse;
+                Log.d("MainPage", "Volley error: " + nResponse.statusCode);
+                if(nResponse.statusCode == 404){
+                    Toast.makeText(MainActivity.this, "404, user not found.", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(MainActivity.this, "Unable to reach server.", Toast.LENGTH_SHORT).show();
+                }
                 if(progressDialog != null && progressDialog.isShowing()) {
                     progressDialog.dismiss();
                 }
@@ -270,10 +286,16 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     //This method adds data to the listview from the local database, if empty then from the GitHub API
     private void loadData(){
+        //Put the repository owner's name in the actionbar
+        getSupportActionBar().setTitle(user + " repositories:");
+
+        //Start the refreshing animation
         swipeRefreshLayout.setRefreshing(true);
+        //Clear the list if it contains anything and load new data from the local database
         repositories.clear();
         repositories.addAll(DBHelper.getLocalRepos(user));
         reposListAdapter.notifyDataSetChanged();
+        //Dismiss the refreshing animation
         swipeRefreshLayout.setRefreshing(false);
 
         //Get the maxPageNumber from the database
@@ -359,6 +381,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 }
             });
             builder.show();
+
+            //Show the keyboard
+            userEditText.requestFocus();
+            InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
 
             return true;
         }
