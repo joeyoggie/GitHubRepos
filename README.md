@@ -10,7 +10,7 @@ Features:
 -Repositories that are not forkable are shown with a grey background  
 
 TODO:  
-parse the JSONArray response in a background thread to prevent list stuttering, and start fetching before actually reaching the last list item
+Start fetching more data before actually reaching the last list item, and maybe parse the JSONArray response in a background thread to prevent list stuttering if fetching is started before reaching the end of the list.  
 
 
 How to use:  
