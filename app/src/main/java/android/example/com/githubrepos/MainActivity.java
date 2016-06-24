@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-//TODO fix the fork value as it seems random
 //TODO fetch more repos when the list is nearly at the end/bottom
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener {
 
@@ -200,6 +199,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 try{
                     if(repoJSONObject.getBoolean("fork")){
                         forkable = true;
+                    }
+                    else {
+                        forkable = false;
                     }
                 }catch (JSONException jException){
                     forkable = false;
