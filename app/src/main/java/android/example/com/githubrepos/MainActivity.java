@@ -207,8 +207,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             @Override
             public void onErrorResponse(VolleyError error) {
                 NetworkResponse nResponse = error.networkResponse;
-                Log.d("MainPage", "Volley error: " + nResponse.statusCode);
-                if(nResponse.statusCode == 404){
+                int statusCode = 0;
+                if(nResponse != null){
+                    statusCode = nResponse.statusCode;
+                }
+                Log.d("MainPage", "Volley error: " + statusCode);
+                if(statusCode == 404){
                     Toast.makeText(MainActivity.this, "404, user not found.", Toast.LENGTH_SHORT).show();
                 }
                 else{
